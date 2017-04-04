@@ -5,8 +5,8 @@ class Neuron:
     def __init__(self, layer, index, n_weights):
         self.layer = layer
         self.index = index
-        self.weights = np.random.uniform(low = -0.5, high = 0.5, size = [1, n_weights])[0]
-        self.theta = np.random.uniform(low = -0.5, high = 0.5)
+        self.weights = np.random.uniform(low=-0.5, high=0.5, size=[1, n_weights])[0]
+        self.theta = np.random.uniform(low=-0.5, high=0.5)
 
     def __str__(self):
         parsed_neuron = "\nNeuron " + str(self.index) + " " + self.layer + " layer" + ":\n"
@@ -26,6 +26,7 @@ class Neuron:
     def as_vector(self):
         return np.append(self.weights, self.theta)
 
+
 class Layer:
     def __init__(self, layer, n_neurons, prev_layer_neurons):
         self.neurons = [Neuron(layer, i, prev_layer_neurons) for i in range(n_neurons)]
@@ -44,6 +45,7 @@ class Layer:
     def as_matrix(self):
         return np.matrix([neuron.as_vector() for neuron in self.neurons])
 
+
 class Forward:
     def __init__(self, f_h_net_h_pj, df_h_dnet_h_pj, f_o_net_o_pk, df_o_dnet_o_pk):
         self.f_h_net_h_pj = f_h_net_h_pj
@@ -51,8 +53,9 @@ class Forward:
         self.f_o_net_o_pk = f_o_net_o_pk
         self.df_o_dnet_o_pk = df_o_dnet_o_pk
 
+
 class Model:
-    def __init__(self, i_neurons = 2, h_neurons = 2, o_neurons = 1):
+    def __init__(self, i_neurons=2, h_neurons=2, o_neurons=1):
         self.i_neurons = i_neurons
         self.h_neurons = h_neurons
         self.o_neurons = o_neurons
@@ -61,10 +64,10 @@ class Model:
         self.o_layer = Layer("o", o_neurons, h_neurons)
 
     def f(self, net):
-        return (1/(1+(math.exp(-net))))
+        return (1 / (1 + (math.exp(-net))))
 
     def df(self, net):
-        return (self.f(net) * (1-self.f(net)))
+        return (self.f(net) * (1 - self.f(net)))
 
     def forward(self, x_p):
         # Compute net and f(net) for every neuron on the hidden layer
@@ -85,7 +88,7 @@ class Model:
 
         return Forward(f_h_net_h_pj, df_h_dnet_h_pj, f_o_net_o_pk, df_o_dnet_o_pk)
 
-    def backpropagation(self, X, Y, eta = 0.1, threshold = 1e-2):
+    def backpropagation(self, X, Y, eta=0.1, threshold=1e-2):
         sqerror = 2 * threshold
 
         while sqerror > threshold:
@@ -108,45 +111,45 @@ class Model:
                 # Calculation of hidden layer's delta for a pattern
                 delta_h_p = np.zeros(self.h_neurons)
 
-                # print("delta_h_p", delta_h_p)                   # h
-                # print("fwd df", fwd.df_h_dnet_h_pj)             # h
-                # b = np.array(delta_o_p)
-                # print("delta_o_p", b, b.shape)                          # o
-                # a = np.array(self.o_layer.as_matrix()[1,:-1])
-                # print("o layer", a, a.shape)      # o,h+1
-
                 # Computes delta for each neuron on the hidden layer
                 for j in range(self.h_neurons):
+                    sum = 0
                     for k in range(self.o_neurons):
-                        #delta_h_p[i] += fwd.df_h_dnet_h_pj[j] * delta_o_p[j] * self.o_layer.as_matrix()[j,i]
-                        delta_h_p[j] += delta_o_p[k] * self.o_layer.as_matrix()[k,j]
-                    #delta_h_p += delta_o_p * self.o_layer.as_matrix()[:,:-1]
-                    #delta_h_p[i] *= fwd.df_h_dnet_h_pj[i]
-                    delta_h_p[j] *= fwd.df_h_dnet_h_pj[j]
+                        sum += delta_o_p[k] * self.o_layer.as_matrix()[k, j]
+                    delta_h_p[j] = fwd.df_h_dnet_h_pj[j] * sum
 
                 # Updates the weights for each neuron on the output layer
-                for i, neuron in enumerate(self.o_layer):
+                for k, neuron in enumerate(self.o_layer):
                     weights = neuron.as_vector()
-                    weights += eta * delta_o_p[i] * np.append(fwd.f_h_net_h_pj,1)
+
+                    weights += eta * delta_o_p[k] * np.append(fwd.f_h_net_h_pj, 1)
+
+                    neuron.weights = weights[:-1]
+                    neuron.theta = weights[len(weights) - 1]
+
 
                 # Updates the weights for each neuron on the hidden layer
-                for i, neuron in enumerate(self.h_layer):
+                for j, neuron in enumerate(self.h_layer):
                     weights = neuron.as_vector()
-                    weights += eta * delta_h_p[i] * np.append(x_p, 1)
+
+                    weights += eta * delta_h_p[j] * np.append(x_p, 1)
+
+                    neuron.weights = weights[:-1]
+                    neuron.theta = weights[len(weights) - 1]
 
             sqerror /= len(X)
-            print (sqerror)
+            print(sqerror)
 
 
-def xor_test(eta = 0.1, threshold = 0.5):
-    dataset = np.genfromtxt("xor.dat", skip_header=1)
-    X = [dataset[i,:2] for i in range(len(dataset))]
-    Y = [dataset[i,2] for i in range(len(dataset))]
+def xor_test(eta=0.5, threshold=1e-2):
+    data_set = np.genfromtxt("xor.dat", skip_header=1)
+    X = [data_set[i, :2] for i in range(len(data_set))]
+    Y = [data_set[i, 2] for i in range(len(data_set))]
 
-    model = Model(2,3,2)
+    model = Model(2, 2, 1)
     model.backpropagation(X, Y, eta, threshold)
 
-    for p in X:
-        print(model.forward(X[p]))
+    for i, p in enumerate(X):
+        print(model.forward(X[i]).f_o_net_o_pk)
 
 xor_test()
